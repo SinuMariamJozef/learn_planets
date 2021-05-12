@@ -1,0 +1,45 @@
+on: push
+name: notify the team
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '12.x'
+    - uses: subosito/flutter-action@v1
+      with:
+        flutter-version: '1.22.2'
+    - name: Get the version
+      id: get_version
+
+    - run: flutter --version
+    - run: flutter config --no-analytics
+    #- run: flutter doctor --android-licenses
+    #- run: flutter pub get
+    #- run: flutter clean
+    #- run: flutter pub get
+    #- run: flutter test
+    - run: flutter upgrade --force
+    - run: flutter build apk --split-per-abi
+
+    - uses: yanzay/notify-telegram@v0.1.0
+      if: always()
+      with:
+        chat: ${{ secrets.ChatID }}
+        token: ${{ secrets.BotToken }}
+        status: ${{ job.status }}
+
+    - name: notify team
+      if: cancelled() == false
+      uses: appleboy/telegram-action@master
+      with:
+        token: ${{ secrets.BotToken }}
+        to: ${{ secrets.ChatID }}
+        #https://github.com/marketplace/actions/telegram-action
+        #https://github.com/appleboy/telegram-action#readme
+        #message: "The ${{ steps.get_version.outputs.VERSION }} @ ${{ github.ref }} ${{ github.sha }} ${{ job.status }}"
+        message: "${{ github.ref }} ${{ job.status }}"
+        document: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
